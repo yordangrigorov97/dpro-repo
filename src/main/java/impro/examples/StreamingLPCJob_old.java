@@ -47,6 +47,7 @@ public class StreamingLPCJob_old {
         //=> 400 samples per window at 16000 sample rate
         long w_period = 50000;  // 0.005 seconds window period
         //=> 80 samples per window at 16000 sample rate
+        // Die Yahlen sind fix
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
