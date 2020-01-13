@@ -21,6 +21,7 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import org.apache.flink.streaming.api.windowing.triggers.*;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -56,51 +57,45 @@ public class StreamingLPCJob {
                 .map(new AssignKeyFunction("pressure")).setParallelism(1);
 
         // write wav file in CSV format
-        audioDataStream.writeAsText("./src/main/resources/LPCin/curious.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
+        audioDataStream.writeAsText("./src/main/resources/LPCout/curious.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
 
         // Apply the Energy function per window
-        DataStream<KeyedDataPoint<Double>> audioDataStreamEnergy = audioDataStream
+        System.out.println("before LPC processing");
+        DataStream<KeyedDataPoint<Double>> LPCStream = audioDataStream
                 // the timestamps are from the data
                 .assignTimestampsAndWatermarks(new ExtractTimestamp())
                 .keyBy("key")
-                // slide a window
                 //.window of((25000, milliseconds), (10000, milliseconds)
                 //.window(SlidingEventTimeWindows.of(Time.seconds(2), Time.seconds(1)))
                 .window(SlidingEventTimeWindows.of(Time.of(w_frame, TimeUnit.MILLISECONDS), //size
-                        Time.of(w_period, TimeUnit.MILLISECONDS))) //sliding
+                        Time.of(w_period, TimeUnit.MILLISECONDS)))
+                .trigger(CountTrigger.of(400))//sliding
                 //or do it with countwindow
-                // calculate energy per window
                 .apply(new LPC(400)); //apply destroys windows
-        audioDataStreamEnergy
+        System.out.println("after LPC processing");
+        LPCStream
                 .addSink(new InfluxDBSink<>("sineWave", "sensors"))
                 .name("sensors-sink");
 
-        DataStream<KeyedDataPoint<Double>> durbinStream = audioDataStreamEnergy
-                .keyBy("key")
-                .window(GlobalWindows.create()).trigger(CountTrigger.of(400)) //sliding
-                //or do it with countwindow
-                // calculate energy per window
-                .apply(new Durbin_old(400, 20)); //apply destroys windows*/
-
-        durbinStream.filter(new FilterByKey("a"))
+        LPCStream.filter(new FilterByKey("hamming"))
+                .rebalance()
+                .writeAsText("./src/main/resources/LPCout/hamming.csv", FileSystem.WriteMode.OVERWRITE)
+                .setParallelism(1);
+        LPCStream.filter(new FilterByKey("a"))
                 .rebalance()
                 .writeAsText("./src/main/resources/LPCout/a.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
-        durbinStream.filter(new FilterByKey("residual"))
+        LPCStream.filter(new FilterByKey("residual"))
                 .rebalance()
                 .writeAsText("./src/main/resources/LPCout/residual.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
-        durbinStream.filter(new FilterByKey("G2"))
+        LPCStream.filter(new FilterByKey("G2"))
                 .rebalance()
                 .writeAsText("./src/main/resources/LPCout/G2.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
 
-
-        //audioDataStreamEnergy.print();
-        // print and write in a csv file the input data, just for vizualisation
-        audioDataStreamEnergy.writeAsText("./src/main/resources/LPCout/hamming.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
-
         env.execute("StreamingAudioProcesingJob");
+        System.out.println("the end");
     }
 
     private static class FilterByKey implements FilterFunction<KeyedDataPoint<Double>> {

@@ -28,14 +28,14 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 		int length = 0;
 		Iterator countIter = input.iterator();
 		for ( ; countIter.hasNext() ; ++length ) countIter.next();
-		//System.out.println("counted "+length);
+		System.out.println("counted "+length);
 
         // get the sum of the elements in the window
         KeyedDataPoint<Double> newElem;
 		Iterator inputIterator = input.iterator();
 
 		//save window in array seq
-		double[] seq = new double[windowSize]; //sometimes windows are smaller than that but it's ok
+		double[] seq = new double[length]; //sometimes windows are smaller than that but it's ok
 		for (int index = 0; inputIterator.hasNext(); index++) {
 			KeyedDataPoint<Double> in = (KeyedDataPoint<Double>) inputIterator.next();
 			seq[index] = in.getValue();
