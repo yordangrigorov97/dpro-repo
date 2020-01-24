@@ -71,12 +71,10 @@ public class StreamingLPCJob {
                         Time.of(w_period, TimeUnit.MILLISECONDS)))
                 .trigger(CountTrigger.of(400))//sliding
                 //or do it with countwindow
-                .apply(new LPC(400)); //apply destroys windows
+                .apply(new LPC(400, 20)); //apply destroys windows
         System.out.println("after LPC processing");
-        LPCStream
-                .addSink(new InfluxDBSink<>("sineWave", "sensors"))
-                .name("sensors-sink");
 
+        //WRITE OUTPUT TO FILES
         LPCStream.filter(new FilterByKey("hamming"))
                 .rebalance()
                 .writeAsText("./src/main/resources/LPCout/hamming.csv", FileSystem.WriteMode.OVERWRITE)
@@ -93,6 +91,12 @@ public class StreamingLPCJob {
                 .rebalance()
                 .writeAsText("./src/main/resources/LPCout/G2.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
+
+        //PREPARE DATA FOR INFLUX?
+        //OUTPUT TO INFLUX/GRAFANA
+//        LPCStream
+//                .addSink(new InfluxDBSink<>("sineWave", "sensors"))
+//                .name("sensors-sink");
 
         env.execute("StreamingAudioProcesingJob");
         System.out.println("the end");
