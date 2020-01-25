@@ -23,6 +23,7 @@ import org.apache.flink.streaming.api.windowing.triggers.*;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import impro.functions.Emotion;
 
 /**
  * This example reads the audio data from a wave file and apply some processing to the samples of data
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 public class StreamingLPCJob {
     public static void main(String[] args) throws Exception {
         //Parameters
+        String writeFilePath = "./src/main/resources/LPCout/emotions/";
         String wavFile = "./src/main/resources/LPCin/curious.wav";
         int p = 20; // number of lpc coefficients
         long w_frame = 250000;  // 0.025 seconds length of window frame
@@ -55,9 +57,6 @@ public class StreamingLPCJob {
         // Read the audio data from a wave file and assign fictional time
         DataStream<KeyedDataPoint<Double>> audioDataStream = env.addSource(new AudioDataSourceFunction(wavFile))
                 .map(new AssignKeyFunction("pressure")).setParallelism(1);
-
-        // write wav file in CSV format
-        audioDataStream.writeAsText("./src/main/resources/LPCout/curious.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
 
         // Apply the Energy function per window
         System.out.println("before LPC processing");
@@ -75,22 +74,26 @@ public class StreamingLPCJob {
         System.out.println("after LPC processing");
 
         //WRITE OUTPUT TO FILES
-        LPCStream.filter(new FilterByKey("hamming"))
-                .rebalance()
-                .writeAsText("./src/main/resources/LPCout/hamming.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
-        LPCStream.filter(new FilterByKey("a"))
-                .rebalance()
-                .writeAsText("./src/main/resources/LPCout/a.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
-        LPCStream.filter(new FilterByKey("residual"))
-                .rebalance()
-                .writeAsText("./src/main/resources/LPCout/residual.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
-        LPCStream.filter(new FilterByKey("G2"))
-                .rebalance()
-                .writeAsText("./src/main/resources/LPCout/G2.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
+        Emotion emotion = Emotion.CURIOUS;
+        switch (emotion){
+            case NEUTRAL: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.NEUTRAL.toString());
+            break;
+            case WUT: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.WUT.toString());
+            break;
+            case ANGST: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.ANGST.toString());
+            break;
+            case FREUDE: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.FREUDE.toString());
+            break;
+            case TRAUER: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.TRAUER.toString());
+            break;
+            case EKEL: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.EKEL.toString());
+            break;
+            case LANGEWEILE: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.LANGEWEILE.toString());
+            break;
+            default: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.CURIOUS.toString());
+                audioDataStream.writeAsText(writeFilePath+Emotion.CURIOUS.toString()+"/curious.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
+                break;
+        }
 
         //PREPARE DATA FOR INFLUX?
         //OUTPUT TO INFLUX/GRAFANA
@@ -100,6 +103,26 @@ public class StreamingLPCJob {
 
         env.execute("StreamingAudioProcesingJob");
         System.out.println("the end");
+    }
+
+    public static void writeToFiles(DataStream<KeyedDataPoint<Double>> LPCStream, String path, String emotion){
+
+        LPCStream.filter(new FilterByKey("hamming"))
+                .rebalance()
+                .writeAsText(path +emotion+"/hamming.csv", FileSystem.WriteMode.OVERWRITE)
+                .setParallelism(1);
+        LPCStream.filter(new FilterByKey("a"))
+                .rebalance()
+                .writeAsText(path +emotion+"/a.csv", FileSystem.WriteMode.OVERWRITE)
+                .setParallelism(1);
+        LPCStream.filter(new FilterByKey("residual"))
+                .rebalance()
+                .writeAsText(path +emotion+"/residual.csv", FileSystem.WriteMode.OVERWRITE)
+                .setParallelism(1);
+        LPCStream.filter(new FilterByKey("G2"))
+                .rebalance()
+                .writeAsText(path +emotion+"/G2.csv", FileSystem.WriteMode.OVERWRITE)
+                .setParallelism(1);
     }
 
     private static class FilterByKey implements FilterFunction<KeyedDataPoint<Double>> {
