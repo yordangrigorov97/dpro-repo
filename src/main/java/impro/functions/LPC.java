@@ -42,45 +42,28 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 			seq[index] = in.getValue();
 		}
 
-		//PREEMPHASIS AND HAMMING
-        for (int index = 0;index<seq.length;index++) {
+		//PREEMPHASIS
+		double[] preEmphed = new double[seq.length];
+		preEmphed[0]=seq[0];
+        for (int index = 0;index<seq.length-1;index++) {
 			seq[index] = seq[index]*preEmphasisCoeff;
-			//apply hamming window
-        	double factor = 0.54f - 0.46f * (float) Math.cos(TWO_PI * index / (windowSize - 1));
-        	seq[index] = seq[index]*factor;
+			preEmphed[index+1] = seq[index+1] - ( preEmphasisCoeff * seq[index] );
         }
+        //HAMMING
+		//double factor = 0.54f - 0.46f * (float) Math.cos(TWO_PI * index / (windowSize - 1)); //found this
+		//in some github repo
+        for (int index=0; index<preEmphed.length;index++)
+			preEmphed[index] = preEmphed[index]*Hamming.hamming400[index];
+		//System.out.println(Arrays.toString(preEmphed));
 
         //DURBIN
-		double[] a = new double[numCoeff];//a = lpc coefficients
-		double[] new_a = new double [numCoeff]; //new arrays guaranteed filled with 0
 
-		//System.out.println(Arrays.toString(seq));
-		double[] r = autocorr(seq, numCoeff);
-		System.out.println("r = "+Arrays.toString(r)+"\n\n\n");
+		double[] r = autocorr(preEmphed, numCoeff);
 		double E = r[0];
-		r = Arrays.copyOfRange(r,1,r.length+1); //remove first element
-
-		// CALCULATE a, we dont use new_a
-
-		for (int i=0;i<numCoeff;i++){
-			//(1) a new set of reflexion coefficients k(i) are calculated
-			double ki = 0.0d;
-			for (int j=0;j<i;j++){
-				ki = ki + ( a[j] * r[i-j] );
-			}
-			System.out.println("("+r[i] + "-"+ki+")/"+E);
-			ki = (double)((double)r[i] - (double)ki) / (double)E; //was r(i) + ki
-			System.out.println("ki="+ki);
-			//(2) the prediction energy is updated
-			// Enew = (1-ki^2) * Eold
-			E = ( 1.0d - (ki*ki) ) * E;
-			//(3) new filter coefficients are computed
-			a[i] = ki; //was minus
-
-			for (int j=0;j<i;j++){
-				a[j]= a[j]- ki * a[i-j];
-			}
-		}
+		r = Arrays.copyOfRange(r,1,r.length); //remove first element
+		System.out.println(Arrays.toString(r));
+		double[] a = durbin (r, E, numCoeff);
+		//System.out.println(Arrays.toString(a));
 
 		//CALCULATE G^2 = residual energy resulting from the coefficients...
 		double G2 = r[0];
@@ -89,17 +72,17 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 		}
 
 		//CALCULATE residual
-		double[] residual = new double[seq.length]; // e = residual in Octave
-		for(int n=0;n<seq.length;n++){
+		double[] residual = new double[preEmphed.length]; // e = residual in Octave
+		for(int n=0;n<preEmphed.length;n++){
 			residual[n] = 0;
 			for (int k=0; k<numCoeff;k++){
 				if ( (n-k) > 0 )
-					residual[n] -= a[k]*seq[n-k]; //was +=
+					residual[n] -= a[k]*preEmphed[n-k]; //was +=
 			}
 
-			residual[n] = seq[n] + residual[n];
+			residual[n] = preEmphed[n] + residual[n];
 		}
-		//System.out.println(Arrays.toString(seq));
+		//System.out.println(Arrays.toString(preEmphed));
 		//System.out.println(a[0]);
 		//System.out.println(Arrays.toString(a));
 		//System.out.println(Arrays.toString(residual));
@@ -108,7 +91,7 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 
 		//OUTPUT TO STREAM
 		long timeStamp = input.iterator().next().getTimeStampMs();
-		output("hamming", timeStamp, seq);
+		output("hamming", timeStamp, preEmphed);
 		output("a",timeStamp,a);
 		output("residual",timeStamp,residual);
 		output("G2",timeStamp,new double[]{G2}); //anonymous array
@@ -135,14 +118,50 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 	 * @param cutOff p in Octave
 	 * @return
 	 */
-	public double[] autocorr(double[] seq, int cutOff) {
+	private static double[] autocorr(double[] seq, int cutOff) {
 
-		double[] r = new double[numCoeff]; //new arrays guaranteed filled with 0
-		for (int i = 0; i < cutOff; i++) {
+		double[] r = new double[cutOff+1]; //new arrays guaranteed filled with 0
+		for (int i = 0; i < cutOff+1; i++) {
 			for (int j = 0; j < seq.length - i; j++)
 				r[i] = (seq[j] * seq[j + i]) + r[i];
 		}
 		return r;
+	}
+
+	/**
+	 *
+	 * @param r correlation values WITHOUT the first value. The first one is in E
+	 * @param E The first correlation value.
+	 * @param p how many a's we need. Size of returned array
+	 * @return the a coefficients
+	 */
+	public static double[] durbin(double[] r, double E, int p) {
+		double[] a = new double[p+1];
+		double[] new_a = new double[p+1];
+
+		for (int i = 1; i <=p; i++) {
+			//(1) a new set of reflexion coefficients k (i) are calculated
+			double ki = 0;
+
+			for (int j = 1; j <=(i - 1); j++)
+				ki = ki + (a[j] * r[i - j -1]);
+			ki = (r[i - 1] + ki) / E;
+
+
+			//(2) the prediction energy is updated
+			//Enew = (1 - ki ^ 2) * Eold
+			E = (1 - (ki * ki)) * E;
+
+			//(3) new filter coefficients are computed
+			new_a[i] = -ki;
+
+			for (int j = 1; j <=(i - 1); j++)
+				new_a[j] = a[j] - ki * a[i - j];
+
+			for (int j = 1; j <=i; j++)
+				a[j] = new_a[j];
+		}
+		return Arrays.copyOfRange(a,1,a.length);
 	}
 
 }
