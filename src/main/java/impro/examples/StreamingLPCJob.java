@@ -21,8 +21,15 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import org.apache.flink.streaming.api.windowing.triggers.*;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+
 import impro.functions.Emotion;
 
 /**
@@ -43,8 +50,10 @@ import impro.functions.Emotion;
 public class StreamingLPCJob {
     public static void main(String[] args) throws Exception {
         //Parameters
+        List<File> files = Files.walk(Paths.get("./src/main/resources/LPCin/emotions")).filter(Files::isRegularFile).map(Path::toFile).collect(Collectors.toList());
         String writeFilePath = "./src/main/resources/LPCout/emotions/";
-        String wavFile = "./src/main/resources/LPCin/curious.wav";
+        Emotion emotion = Emotion.CURIOUS;
+        int counter = 1;
         int p = 20; // number of lpc coefficients
         long w_frame = 250000;  // 0.025 seconds length of window frame
         //=> 400 samples per window at 16000 sample rate
@@ -54,47 +63,72 @@ public class StreamingLPCJob {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        // Read the audio data from a wave file and assign fictional time
-        DataStream<KeyedDataPoint<Double>> audioDataStream = env.addSource(new AudioDataSourceFunction(wavFile))
-                .map(new AssignKeyFunction("pressure")).setParallelism(1);
+        System.out.println("Number of files: " + files.size());
 
-        // Apply the Energy function per window
-        System.out.println("before LPC processing");
-        DataStream<KeyedDataPoint<Double>> LPCStream = audioDataStream
-                // the timestamps are from the data
-                .assignTimestampsAndWatermarks(new ExtractTimestamp())
-                .keyBy("key")
-                //.window of((25000, milliseconds), (10000, milliseconds)
-                //.window(SlidingEventTimeWindows.of(Time.seconds(2), Time.seconds(1)))
-                .window(SlidingEventTimeWindows.of(Time.of(w_frame, TimeUnit.MILLISECONDS), //size
-                        Time.of(w_period, TimeUnit.MILLISECONDS)))
-                .trigger(CountTrigger.of(400))//sliding
-                //or do it with countwindow
-                .apply(new LPC(400, 20)); //apply destroys windows
-        System.out.println("after LPC processing");
+        for(File f : files) {
 
-        //WRITE OUTPUT TO FILES
-        Emotion emotion = Emotion.CURIOUS;
-        switch (emotion){
-            case NEUTRAL: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.NEUTRAL.toString());
-            break;
-            case WUT: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.WUT.toString());
-            break;
-            case ANGST: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.ANGST.toString());
-            break;
-            case FREUDE: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.FREUDE.toString());
-            break;
-            case TRAUER: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.TRAUER.toString());
-            break;
-            case EKEL: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.EKEL.toString());
-            break;
-            case LANGEWEILE: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.LANGEWEILE.toString());
-            break;
-            default: StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.CURIOUS.toString());
-                audioDataStream.writeAsText(writeFilePath+Emotion.CURIOUS.toString()+"/curious.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
-                break;
+            String readFilePath = "./src/main/resources/LPCin/emotions/" + f.getName();
+
+            // Read the audio data from a wave file and assign fictional time
+            DataStream<KeyedDataPoint<Double>> audioDataStream = env.addSource(new AudioDataSourceFunction(readFilePath))
+                    .map(new AssignKeyFunction("pressure")).setParallelism(1);
+
+            // Apply the Energy function per window
+            System.out.println("before LPC processing");
+            DataStream<KeyedDataPoint<Double>> LPCStream = audioDataStream
+                    // the timestamps are from the data
+                    .assignTimestampsAndWatermarks(new ExtractTimestamp())
+                    .keyBy("key")
+                    //.window of((25000, milliseconds), (10000, milliseconds)
+                    //.window(SlidingEventTimeWindows.of(Time.seconds(2), Time.seconds(1)))
+                    .window(SlidingEventTimeWindows.of(Time.of(w_frame, TimeUnit.MILLISECONDS), //size
+                            Time.of(w_period, TimeUnit.MILLISECONDS)))
+                    .trigger(CountTrigger.of(400))//sliding
+                    //or do it with countwindow
+                    .apply(new LPC(400, 20)); //apply destroys windows
+            System.out.println("after LPC processing");
+
+            if(f.getName().contains("N")){ emotion = Emotion.NEUTRAL;}
+            if(f.getName().contains("W")) { emotion = Emotion.WUT;}
+            if(f.getName().contains("A")) { emotion = Emotion.ANGST;}
+            if(f.getName().contains("F")) { emotion = Emotion.FREUDE;}
+            if(f.getName().contains("T")) { emotion = Emotion.TRAUER;}
+            if(f.getName().contains("E")) { emotion = Emotion.EKEL;}
+            if(f.getName().contains("L")) { emotion = Emotion.LANGEWEILE;}
+            if(f.getName().contains("curious")) { emotion = Emotion.CURIOUS;}
+
+            //WRITE OUTPUT TO FILES
+            switch (emotion) {
+                case NEUTRAL:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.NEUTRAL.toString(), f.getName());
+                    break;
+                case WUT:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.WUT.toString(), f.getName());
+                    break;
+                case ANGST:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.ANGST.toString(), f.getName());
+                    break;
+                case FREUDE:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.FREUDE.toString(), f.getName());
+                    break;
+                case TRAUER:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.TRAUER.toString(), f.getName());
+                    break;
+                case EKEL:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.EKEL.toString(), f.getName());
+                    break;
+                case LANGEWEILE:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.LANGEWEILE.toString(), f.getName());
+                    break;
+                default:
+                    StreamingLPCJob.writeToFiles(LPCStream, writeFilePath, Emotion.CURIOUS.toString(), f.getName());
+                 //   audioDataStream.writeAsText(writeFilePath + Emotion.CURIOUS.toString() + "/"+ f.getName()+"/curious.csv", FileSystem.WriteMode.OVERWRITE).setParallelism(1);
+                    break;
+            }
+            System.out.println("Writing the audio " + counter + " into " + writeFilePath+ emotion.toString()+ "/"+f.getName());
+            readFilePath = "";
+            counter++;
         }
-
         //PREPARE DATA FOR INFLUX?
         //OUTPUT TO INFLUX/GRAFANA
 //        LPCStream
@@ -105,23 +139,23 @@ public class StreamingLPCJob {
         System.out.println("the end");
     }
 
-    public static void writeToFiles(DataStream<KeyedDataPoint<Double>> LPCStream, String path, String emotion){
+    public static void writeToFiles(DataStream<KeyedDataPoint<Double>> LPCStream, String path, String emotion, String audioname){
 
         LPCStream.filter(new FilterByKey("hamming"))
                 .rebalance()
-                .writeAsText(path +emotion+"/hamming.csv", FileSystem.WriteMode.OVERWRITE)
+                .writeAsText(path +emotion+"/"+audioname+"/hamming.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
         LPCStream.filter(new FilterByKey("a"))
                 .rebalance()
-                .writeAsText(path +emotion+"/a.csv", FileSystem.WriteMode.OVERWRITE)
+                .writeAsText(path +emotion+"/"+audioname+"/a.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
         LPCStream.filter(new FilterByKey("residual"))
                 .rebalance()
-                .writeAsText(path +emotion+"/residual.csv", FileSystem.WriteMode.OVERWRITE)
+                .writeAsText(path +emotion+"/"+audioname+"/residual.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
         LPCStream.filter(new FilterByKey("G2"))
                 .rebalance()
-                .writeAsText(path +emotion+"/G2.csv", FileSystem.WriteMode.OVERWRITE)
+                .writeAsText(path +emotion+"/"+audioname+"/G2.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
     }
 

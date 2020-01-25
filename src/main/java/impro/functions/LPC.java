@@ -61,7 +61,7 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 		double[] r = autocorr(preEmphed, numCoeff);
 		double E = r[0];
 		r = Arrays.copyOfRange(r,1,r.length); //remove first element
-		System.out.println(Arrays.toString(r));
+		//System.out.println(Arrays.toString(r));
 		double[] a = durbin (r, E, numCoeff);
 		//System.out.println(Arrays.toString(a));
 
