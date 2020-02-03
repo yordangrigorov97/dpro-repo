@@ -81,7 +81,8 @@ public class AudioDataSourceFunction implements SourceFunction<DataPoint<Double>
     	try {     		
     	   AudioInputStream ais = AudioSystem.getAudioInputStream(new File(wavFile));
     	   this.samplingRate = (int) ais.getFormat().getSampleRate();
-    	   
+    	   this.samplingRate = (int) ais.getFormat().getSampleRate();
+
     	   AudioDoubleDataSource signal = new AudioDoubleDataSource(ais);
     	      	   
      	   audio = signal.getAllData();      	   
