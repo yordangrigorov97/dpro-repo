@@ -9,36 +9,19 @@ import org.apache.flink.util.Collector;
 import java.util.Arrays;
 import java.util.Iterator;
 
-public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoint<Double>, Tuple, TimeWindow> {
+public class LPCMultiple implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoint<Double>, Tuple, TimeWindow> {
 	protected static final double TWO_PI = 2 * Math.PI;
 
     @Override
     public void apply(Tuple arg0, TimeWindow window, Iterable<KeyedDataPoint<Double>> input, Collector<KeyedDataPoint<Double>> out) {
-    	/*
-    	We need a way to recreate the windows later. We will do this by assigning a window-specific
-    	key to each element in the current window. window.getEnd() provides one such unique number.
-    	How else can we do this?
-    	 */
 		this.window = window;
 		this.out=out;
-        String winKey = String.valueOf(window.getEnd());//input.iterator().next().getKey();
+        String winKey = input.iterator().next().getKey();
 		double preEmphasisCoeff=0.97;
-        //count window length
-		int length = 0;
-		Iterator countIter = input.iterator();
-		for ( ; countIter.hasNext() ; ++length ) countIter.next();
-
-        // get the sum of the elements in the window
-        KeyedDataPoint<Double> newElem;
-		Iterator inputIterator = input.iterator();
 
 		//TODO maybe sort?
 		//save window in array seq
-		double[] seq = new double[length]; //sometimes windows are smaller than that but it's ok
-		for (int index = 0; inputIterator.hasNext(); index++) {
-			KeyedDataPoint<Double> in = (KeyedDataPoint<Double>) inputIterator.next();
-			seq[index] = in.getValue();
-		}
+		double[] seq = windowToArray(input);
 
 		//PREEMPHASIS
 		double[] preEmphed = new double[seq.length];
@@ -48,10 +31,10 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 			preEmphed[index+1] = seq[index+1] - ( preEmphasisCoeff * seq[index] );
         }
         //HAMMING
-		//double factor = 0.54f - 0.46f * (float) Math.cos(TWO_PI * index / (windowSize - 1)); //found this
-		//in some github repo
+
+		double[] hammingFactors = Hamming.of(windowSize);
         for (int index=0; index<preEmphed.length;index++)
-			preEmphed[index] = preEmphed[index]* HammingStatic.hamming400[index];
+			preEmphed[index] = preEmphed[index]* hammingFactors[index];
 		//System.out.println(Arrays.toString(preEmphed));
 
         //DURBIN
@@ -90,7 +73,7 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 		//OUTPUT TO STREAM
 		long timeStamp = input.iterator().next().getTimeStampMs();
 		//output("hamming", timeStamp, preEmphed);
-		output("a",timeStamp,a);
+		output(winKey,timeStamp,a);
 		//output("residual",timeStamp,residual);
 		//output("G2",timeStamp,new double[]{G2}); //anonymous array
 
@@ -100,11 +83,25 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 	private Collector<KeyedDataPoint<Double>> out;
     private int windowSize;
     private int numCoeff; //number of coefficients (p in Octave)
-    public LPC(int windowSize, int numCoeff){
+    public LPCMultiple(int windowSize, int numCoeff){
     	this.windowSize = windowSize;
 		this.numCoeff = numCoeff;
 
 	}
+	private double[] windowToArray(Iterable<KeyedDataPoint<Double>> input){
+		int length = 0;
+		Iterator countIter = input.iterator();
+		for ( ; countIter.hasNext() ; ++length ) countIter.next();
+
+		Iterator inputIterator = input.iterator();
+		double[] seq = new double[length]; //sometimes windows are smaller than that but it's ok
+		for (int index = 0; inputIterator.hasNext(); index++) {
+			KeyedDataPoint<Double> in = (KeyedDataPoint<Double>) inputIterator.next();
+			seq[index] = in.getValue();
+		}
+		return seq;
+	}
+
 	private void output(String key,long timeStamp,double[] a){
 		for (int i=0;i<a.length;i++){
 			KeyedDataPoint<Double> newElem = new KeyedDataPoint<Double>(key,timeStamp, a[i]);

@@ -1,24 +1,17 @@
 package impro.examples;
 
-import impro.connectors.sources.AudioDataSourceFunction;
 import impro.connectors.sources.AudioFolderSourceFunction;
 import impro.data.KeyedDataPoint;
-import impro.functions.LPC;
 import impro.functions.LPCMultiple;
-import impro.util.AssignKeyFunction;
 import org.apache.flink.api.common.functions.FilterFunction;
-import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
-import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-import org.apache.flink.util.Collector;
-import org.apache.flink.streaming.api.windowing.triggers.*;
+import org.apache.flink.streaming.api.windowing.triggers.CountTrigger;
 
 import java.util.concurrent.TimeUnit;
 
@@ -37,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * tmp_energy.csv
  * these two files can be plotted with the R script:
  */
-public class StreamingLPCJob {
+public class StreamingLPCMultipleJob {
     public static void main(String[] args) throws Exception {
         //Parameters
         int counter = 1;
@@ -53,8 +46,8 @@ public class StreamingLPCJob {
 
         // Read the audio data from a wave file and assign fictional time
         DataStream<KeyedDataPoint<Double>> audioDataStream = env
-                .addSource(new AudioDataSourceFunction("./src/main/resources/LPCin/curious.wav"))
-                .map(new AssignKeyFunction("pressure"))
+                .addSource(new AudioFolderSourceFunction("./src/main/resources/LPCin/emotions"))
+                //.map(new AssignKeyFunction("pressure"))
                 .setParallelism(1);
 
         // Apply the Energy function per window
@@ -70,9 +63,9 @@ public class StreamingLPCJob {
                         Time.of(w_period, TimeUnit.MILLISECONDS)))
                 .trigger(CountTrigger.of(400))//sliding
                 //or do it with countwindow
-                .apply(new LPC(400, 20)) //apply destroys windows
+                .apply(new LPCMultiple(400, 20)) //apply destroys windows
                 .rebalance()
-                .writeAsText("./src/main/resources/LPCout/LPCout.csv", FileSystem.WriteMode.OVERWRITE)
+                .writeAsText("./src/main/resources/LPCout/LPCMultipleout.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
 
         //WRITE OUTPUT TO FILES
