@@ -76,7 +76,7 @@ public class StreamingLPCJob {
 
             // Apply the Energy function per window
             System.out.println("before LPC processing");
-            //DataStream<KeyedDataPoint<Double>> LPCStream =
+           // DataStream<KeyedDataPoint<Double>> LPCStream =
                     audioDataStream
                     // the timestamps are from the data
                     .assignTimestampsAndWatermarks(new ExtractTimestamp())
@@ -88,8 +88,8 @@ public class StreamingLPCJob {
                     .trigger(CountTrigger.of(400))//sliding
                     //or do it with countwindow
                     .apply(new LPC(400, 20))
-                    .addSink(new InfluxDBSink<>("sineWave", "sensors"))
-                    .name("sensors-sink"); //apply destroys windows
+                    .addSink(new InfluxDBSink<>("sineWave", "wut"))
+                    .name("wut"); //apply destroys windows
 
             /*    LPCStream
                 .addSink(new InfluxDBSink<>("sineWave", "sensors"))
@@ -97,7 +97,7 @@ public class StreamingLPCJob {
 
             System.out.println("after LPC processing");
 
-           /* if(f.getName().contains("N")){ emotion = Emotion.NEUTRAL;}
+          /*  if(f.getName().contains("N")){ emotion = Emotion.NEUTRAL;}
             if(f.getName().contains("W")) { emotion = Emotion.WUT;}
             if(f.getName().contains("A")) { emotion = Emotion.ANGST;}
             if(f.getName().contains("F")) { emotion = Emotion.FREUDE;}
@@ -150,22 +150,22 @@ public class StreamingLPCJob {
 
     public static void writeToFiles(DataStream<KeyedDataPoint<Double>> LPCStream, String path, String emotion, String audioname){
 
-        LPCStream.filter(new FilterByKey("hamming"))
+        /*LPCStream.filter(new FilterByKey("hamming"))
                 .rebalance()
                 .writeAsText(path +emotion+"/"+audioname+"/hamming.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
+                .setParallelism(1);*/
         LPCStream.filter(new FilterByKey("a"))
                 .rebalance()
                 .writeAsText(path +emotion+"/"+audioname+"/a.csv", FileSystem.WriteMode.OVERWRITE)
                 .setParallelism(1);
-        LPCStream.filter(new FilterByKey("residual"))
+        /*LPCStream.filter(new FilterByKey("residual"))
                 .rebalance()
                 .writeAsText(path +emotion+"/"+audioname+"/residual.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
-        LPCStream.filter(new FilterByKey("G2"))
+                .setParallelism(1);*/
+        /*LPCStream.filter(new FilterByKey("G2"))
                 .rebalance()
                 .writeAsText(path +emotion+"/"+audioname+"/G2.csv", FileSystem.WriteMode.OVERWRITE)
-                .setParallelism(1);
+                .setParallelism(1);*/
     }
 
     private static class FilterByKey implements FilterFunction<KeyedDataPoint<Double>> {
