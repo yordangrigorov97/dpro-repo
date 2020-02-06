@@ -32,9 +32,9 @@ public class LPCMultiple implements WindowFunction<KeyedDataPoint<Double>, Keyed
         }
         //HAMMING
 
-		double[] hammingFactors = Hamming.of(windowSize);
+	/*	double[] hammingFactors = Hamming.of(windowSize);
         for (int index=0; index<preEmphed.length;index++)
-			preEmphed[index] = preEmphed[index]* hammingFactors[index];
+			preEmphed[index] = preEmphed[index]* hammingFactors[index];*/
 		//System.out.println(Arrays.toString(preEmphed));
 
         //DURBIN
