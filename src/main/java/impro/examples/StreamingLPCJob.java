@@ -76,7 +76,8 @@ public class StreamingLPCJob {
 
             // Apply the Energy function per window
             System.out.println("before LPC processing");
-            DataStreamSink<KeyedDataPoint<Double>> LPCStream = audioDataStream
+            //DataStream<KeyedDataPoint<Double>> LPCStream =
+                    audioDataStream
                     // the timestamps are from the data
                     .assignTimestampsAndWatermarks(new ExtractTimestamp())
                     .keyBy("key")
@@ -96,7 +97,7 @@ public class StreamingLPCJob {
 
             System.out.println("after LPC processing");
 
-            /*if(f.getName().contains("N")){ emotion = Emotion.NEUTRAL;}
+           /* if(f.getName().contains("N")){ emotion = Emotion.NEUTRAL;}
             if(f.getName().contains("W")) { emotion = Emotion.WUT;}
             if(f.getName().contains("A")) { emotion = Emotion.ANGST;}
             if(f.getName().contains("F")) { emotion = Emotion.FREUDE;}
@@ -135,8 +136,7 @@ public class StreamingLPCJob {
             }
             System.out.println("Writing the audio " + counter + " into " + writeFilePath+ emotion.toString()+ "/"+f.getName());
             readFilePath = "";
-            counter++;
-                */
+            counter++;*/
         }
         //PREPARE DATA FOR INFLUX?
         //OUTPUT TO INFLUX/GRAFANA

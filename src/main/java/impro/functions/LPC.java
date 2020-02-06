@@ -89,10 +89,10 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 
 		//OUTPUT TO STREAM
 		long timeStamp = input.iterator().next().getTimeStampMs();
-		output("hamming", timeStamp, preEmphed);
+		//output("hamming", timeStamp, preEmphed);
 		output("a",timeStamp,a);
-		output("residual",timeStamp,residual);
-		output("G2",timeStamp,new double[]{G2}); //anonymous array
+		//output("residual",timeStamp,residual);
+		//output("G2",timeStamp,new double[]{G2}); //anonymous array
 
 
     }
@@ -106,7 +106,7 @@ public class LPC implements WindowFunction<KeyedDataPoint<Double>, KeyedDataPoin
 
 	}
 	private void output(String key,long timeStamp,double[] a){
-		for (int i=0;i<a.length;i++){
+		for (int i=0;i<a.length;i=i+20){
 			KeyedDataPoint<Double> newElem = new KeyedDataPoint<Double>(key,timeStamp, a[i]);
 			out.collect(newElem);
 		}
