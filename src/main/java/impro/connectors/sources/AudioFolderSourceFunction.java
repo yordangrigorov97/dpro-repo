@@ -1,6 +1,5 @@
 package impro.connectors.sources;
 
-import impro.data.DataPoint;
 import impro.data.KeyedDataPoint;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
 

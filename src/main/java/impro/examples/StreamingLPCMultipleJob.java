@@ -3,6 +3,7 @@ package impro.examples;
 import impro.connectors.sources.AudioFolderSourceFunction;
 import impro.data.KeyedDataPoint;
 import impro.functions.LPCMultiple;
+import impro.functions.ParseEmotions;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -56,6 +57,7 @@ public class StreamingLPCMultipleJob {
         audioDataStream
                 // the timestamps are from the data
                 .assignTimestampsAndWatermarks(new ExtractTimestamp())
+                .map(new ParseEmotions<Double>())
                 .keyBy("key")
                 //.window of((25000, milliseconds), (10000, milliseconds)
                 //.window(SlidingEventTimeWindows.of(Time.seconds(2), Time.seconds(1)))

@@ -1,23 +1,17 @@
 package impro.examples;
 
 import impro.connectors.sources.AudioDataSourceFunction;
-import impro.connectors.sources.AudioFolderSourceFunction;
 import impro.data.KeyedDataPoint;
 import impro.functions.LPC;
-import impro.functions.LPCMultiple;
 import impro.util.AssignKeyFunction;
 import org.apache.flink.api.common.functions.FilterFunction;
-import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
-import org.apache.flink.streaming.api.functions.windowing.WindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
-import org.apache.flink.util.Collector;
 import org.apache.flink.streaming.api.windowing.triggers.*;
 
 import java.util.concurrent.TimeUnit;

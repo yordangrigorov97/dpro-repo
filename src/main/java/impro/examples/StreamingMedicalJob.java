@@ -15,8 +15,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import impro.data.KeyedDataPoint;
-import impro.connectors.sinks.InfluxDBSink;
-import impro.functions.AverageWindowFunction;
 import impro.functions.MovingAverageFunction;
 
 /**

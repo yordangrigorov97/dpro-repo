@@ -4,7 +4,6 @@ import impro.connectors.sources.AudioDataSourceFunction;
 import impro.data.KeyedDataPoint;
 import impro.util.AssignKeyFunction;
 import org.apache.flink.api.java.tuple.Tuple;
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
