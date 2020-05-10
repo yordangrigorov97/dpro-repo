@@ -88,7 +88,7 @@
               </filters>
               <transformers>
                 <transformer>
-                  <mainClass>impro.StreamingJob</mainClass>
+                  <mainClass>impro.myExamples.WordCountBatch</mainClass>
                 </transformer>
               </transformers>
             </configuration>
@@ -112,6 +112,11 @@
           <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
           <version>${flink.version}</version>
           <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.flink</groupId>
+          <artifactId>flink-clients_2.11</artifactId>
+          <version>1.10.0</version>
         </dependency>
       </dependencies>
     </profile>
@@ -142,12 +147,12 @@
     </dependency>
   </dependencies>
   <properties>
-    <scala.binary.version>2.11</scala.binary.version>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
     <java.version>1.8</java.version>
+    <scala.binary.version>2.11</scala.binary.version>
+    <flink.version>1.9.0</flink.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <flink.version>1.9.0</flink.version>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
   </properties>
 </project>
 

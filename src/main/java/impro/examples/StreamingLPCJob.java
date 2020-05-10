@@ -89,7 +89,7 @@ public class StreamingLPCJob {
                     //or do it with countwindow
                     .apply(new LPC(400, 20))
                     .addSink(new InfluxDBSink<>("sineWave", "wut"))
-                    .name("wut"); //apply destroys windows
+                    .name("wut");
 
             /*    LPCStream
                 .addSink(new InfluxDBSink<>("sineWave", "sensors"))
