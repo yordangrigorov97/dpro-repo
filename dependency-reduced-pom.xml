@@ -88,7 +88,7 @@
               </filters>
               <transformers>
                 <transformer>
-                  <mainClass>impro.myExamples.WordCountBatch</mainClass>
+                  <mainClass>impro.myExamples.WordCountStreamSocket</mainClass>
                 </transformer>
               </transformers>
             </configuration>
